@@ -8,6 +8,7 @@ PLAYER="mpv"
 PLAYERARGS="--fs --no-audio --no-osc --input-ipc-server=/tmp/mpv.sock --keep-open=yes --pause"
 SUFFIX="official"
 MPV_CHECK_INTERVAL=0.25
+SONG_CHECK_INTERVAL=0.25
 USE_BG=0
 BG_IMAGE="black.png"
 USE_UNCLUTTER=0
@@ -56,7 +57,7 @@ while true; do
     reset_song "$CURRENT"
 
     echo "starting youtube-viewer"
-    youtube-viewer -q --std-input="1" --video-player="$PLAYER" --append-arg=$PLAYERARGS "$CURRENT $SUFFIX" &
+    youtube-viewer -q --std-input="1" --video-player="$PLAYER" --append-arg="$PLAYERARGS" "$CURRENT $SUFFIX" &
 
     false
     while [ $? != 0 ]; do
@@ -74,5 +75,5 @@ while true; do
     echo cycle pause | socat - /tmp/mpv.sock
   fi
   # set higher if too resource heavy
-  sleep 0.25
+  sleep $SONG_CHECK_INTERVAL
 done
