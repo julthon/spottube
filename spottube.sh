@@ -4,23 +4,33 @@
 # otherwise you need to modify this script
 
 # params
+
+# made to modify:
+USE_BG=1
+USE_UNCLUTTER=0
+
 PLAYER="mpv"
 PLAYERARGS="--fs --no-audio --no-osc --input-ipc-server=/tmp/mpv.sock --keep-open=yes --pause"
 SUFFIX="official"
+DOWNLOAD_CACHE=1
+DOWNLOAD_CACHE_DIR="./cache"
 MPV_CHECK_INTERVAL=0.25
 SONG_CHECK_INTERVAL=0.25
-USE_BG=0
 BG_IMAGE="black.png"
-USE_UNCLUTTER=0
 
 exit_cleanup() {
-    trap - SIGINT SIGTERM
-    echo "cleanup"
-    kill -- -$$
+  trap - SIGINT SIGTERM
+  echo "cleanup"
+  kill -- -$$
 }
 
 # run exit_cleanup when interrupted
 trap exit_cleanup SIGINT SIGTERM
+
+has_connection() {
+  ping -c 1 -W 2 8.8.8.8 > /dev/null 2> /dev/null
+  return $?
+}
 
 # show background
 if [ $USE_BG = 1 ]; then
@@ -29,7 +39,7 @@ fi
 
 # hide cursor
 if [ $USE_UNCLUTTER = 1 ]; then
-  unclutter -idle 0.01 -root &
+  unclutter -root &
 fi
 
 reset_song() {
@@ -51,13 +61,29 @@ while true; do
     CURRENT="$NEW"
 
     echo "got new song: $CURRENT"
-    killall youtube-viewer > /dev/null
-    killall $PLAYER 2> /dev/null
+    killall youtube-viewer > /dev/null 2> /dev/null
+    killall $PLAYER > /dev/null 2> /dev/null
     
     reset_song "$CURRENT"
 
-    echo "starting youtube-viewer"
-    youtube-viewer -q --std-input="1" --video-player="$PLAYER" --append-arg="$PLAYERARGS" "$CURRENT $SUFFIX" &
+    has_connection
+    if [ $? != 0 ]; then
+      echo "no connection, trying offline"
+      if [ -f "$DOWNLOAD_CACHE_DIR/$CURRENT" ]; then
+        eval "mpv $PLAYERARGS \"$DOWNLOAD_CACHE_DIR/$CURRENT\"" &
+      else
+        echo "file not found"
+        playerctl play
+        continue
+      fi
+    else
+      echo "starting youtube-viewer"
+      if [ $DOWNLOAD_CACHE != 0 ]; then
+        youtube-viewer -d -dp --skip_if_exists --downloads-dir="$DOWNLOAD_CACHE_DIR" --filename="$CURRENT" --fat32safe -q --std-input="1" --video-player="$PLAYER" --append-arg="$PLAYERARGS" "$CURRENT $SUFFIX" &
+      else
+        youtube-viewer -q --std-input="1" --video-player="$PLAYER" --append-arg="$PLAYERARGS" "$CURRENT $SUFFIX" &
+      fi
+    fi
 
     false
     while [ $? != 0 ]; do
