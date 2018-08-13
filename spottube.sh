@@ -59,8 +59,9 @@ while true; do
   NEW="$(playerctl metadata xesam:artist) $(playerctl metadata xesam:title)"
   if [ "$NEW" != "$CURRENT" ]; then
     CURRENT="$NEW"
+    FILENAME=$(echo "$CURRENT" | md5sum | cut -d" " -f1 | xargs)
 
-    echo "got new song: $CURRENT"
+    echo "got new song: $CURRENT -> $FILENAME"
     killall youtube-viewer > /dev/null 2> /dev/null
     killall $PLAYER > /dev/null 2> /dev/null
     
@@ -69,8 +70,8 @@ while true; do
     has_connection
     if [ $? != 0 ]; then
       echo "no connection, trying offline"
-      if [ -f "$DOWNLOAD_CACHE_DIR/$CURRENT" ]; then
-        eval "mpv $PLAYERARGS \"$DOWNLOAD_CACHE_DIR/$CURRENT\"" &
+      if [ -f "$DOWNLOAD_CACHE_DIR/$FILENAME" ]; then
+        eval "mpv $PLAYERARGS \"$DOWNLOAD_CACHE_DIR/$FILENAME\"" &
       else
         echo "file not found"
         playerctl play
@@ -79,7 +80,7 @@ while true; do
     else
       echo "starting youtube-viewer"
       if [ $DOWNLOAD_CACHE != 0 ]; then
-        youtube-viewer -d -dp --skip_if_exists --downloads-dir="$DOWNLOAD_CACHE_DIR" --filename="$CURRENT" --fat32safe -q --std-input="1" --video-player="$PLAYER" --append-arg="$PLAYERARGS" "$CURRENT $SUFFIX" &
+        youtube-viewer -d -dp --skip_if_exists --downloads-dir="$DOWNLOAD_CACHE_DIR" --filename="$FILENAME" -q --std-input="1" --video-player="$PLAYER" --append-arg="$PLAYERARGS" "$CURRENT $SUFFIX" &
       else
         youtube-viewer -q --std-input="1" --video-player="$PLAYER" --append-arg="$PLAYERARGS" "$CURRENT $SUFFIX" &
       fi
